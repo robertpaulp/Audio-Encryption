@@ -6,7 +6,7 @@ import sympy
 from scipy.io import wavfile
 
 # define
-N = 10
+N = 4
 
 
 def load_data(filename):
@@ -16,14 +16,28 @@ def load_data(filename):
 
 
 def encrypt(sample_rate, audio_data, output_file):
+    
+    spectrum = scipy.fft.fft(audio_data)
+    spectrum = numpy.array(spectrum, dtype=numpy.complex64)
+    spectrum = numpy.real(spectrum)
+
+    plt.plot(spectrum)
+    plt.plot(audio_data)
+    plt.show()
+
+    # write to file
+    wavfile.write(output_file, sample_rate, spectrum)
 
 
-    spectrum = numpy.fft.fft(audio_data)
-    sub_bands = numpy.split(spectrum, N)
+def decrypt(input_file, output_file):
+    # read from file
+    sample_rate, audio_data = load_data(input_file)
 
-    shuffle_bands = numpy.random.shuffle(sub_bands)
+    # decrypt
+    spectrum = numpy.array(audio_data, dtype=numpy.complex64)
+    spectrum = scipy.fft.ifft(spectrum)
+    spectrum = numpy.real(spectrum)
+    spectrum = numpy.array(spectrum, dtype=numpy.int16)
 
-    x_FT = numpy.concatenate(shuffle_bands)
-
-    wavfile.write(output_file, sample_rate, x_FT)
-
+    # write to file
+    wavfile.write(output_file, sample_rate, spectrum)
