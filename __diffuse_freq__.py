@@ -23,8 +23,15 @@ def encrypt(data, output_file):
     audio_data = data[2]
 
     N = 10
-    
+
     spectrum = scipy.fft.fft(audio_data)
+
+    original_len = len(spectrum)
+    # Split spectrum into N sub-bands
+    remaining = len(spectrum) % N
+    if remaining != 0:
+        padding = N - remaining
+        spectrum = numpy.pad(spectrum, (0, padding), 'constant')
 
     sub_band = numpy.split(spectrum, N)
     sub_band_idx = numpy.random.permutation(N)
@@ -37,6 +44,9 @@ def encrypt(data, output_file):
 
     enc_audio_data = numpy.real(encrypted_spectrum)
 
+    # Remove padding
+    enc_audio_data = enc_audio_data[:original_len]    
+
     enc_audio_data = enc_audio_data.astype(numpy.int16)
 
     wavfile.write(output_file, sample_rate, enc_audio_data)
@@ -44,30 +54,33 @@ def encrypt(data, output_file):
     return sub_band_idx
 
 def decrypt(input_file, output_file, key):
-    
+
     # Get data
-    sample_rate, enc_audio_data = wavfile.read(input_file)
-    sub_band_idx = key
-
-    print(sub_band_idx)
-
-
-    spectrum_shuffled = scipy.fft.fft(enc_audio_data)
+    sample_rate, audio_data = wavfile.read(input_file)
 
     N = 10
 
-    sub_band_shuffled = numpy.split(spectrum_shuffled, N)
+    spectrum = scipy.fft.fft(audio_data)
 
-    sub_band = [sub_band_shuffled[sub_band_idx[i]] for i in range(N)]
+    # # Split spectrum into N sub-bands
+    # remaining = len(spectrum) % N
+    # if remaining != 0:
+    #     padding = N - remaining
+    #     spectrum = numpy.pad(spectrum, (0, padding), 'constant')
 
-    spectrum = numpy.concatenate(sub_band)
+    sub_band = numpy.split(spectrum, N)
+    
+    #inverse_key = numpy.argsort(key)
+    arranged_sub_band = [0] * N
+    for i in range(N):
+        arranged_sub_band[key[i]] = sub_band[i]
 
-    decrypted_spectrum = scipy.fft.ifft(spectrum)
+    spectrum_shuffled = numpy.concatenate(arranged_sub_band)
 
-    audio_data = numpy.real(decrypted_spectrum)
+    encrypted_spectrum = scipy.fft.ifft(spectrum_shuffled)
 
-    audio_data = audio_data.astype(numpy.int16)
+    enc_audio_data = numpy.real(encrypted_spectrum)
 
-    decrypted_data = [len(audio_data), sample_rate, audio_data]
+    enc_audio_data = enc_audio_data.astype(numpy.int16)
 
-    wavfile.write(output_file, sample_rate, audio_data)
+    wavfile.write(output_file, sample_rate, enc_audio_data)
