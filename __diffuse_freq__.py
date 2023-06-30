@@ -22,20 +22,23 @@ def encrypt(data, output_file):
     sample_rate = data[1]
     audio_data = data[2]
 
-    N = 100
+    N = 10000
 
     plt.plot(audio_data)
 
-    spectrum = scipy.fft.fft(audio_data)
+    # spectrum = scipy.fft.fft(audio_data)
+    spectrum = audio_data
 
     original_len = len(spectrum)
     # Split spectrum into N sub-bands
-    # remaining = len(spectrum) % N
-    # if remaining != 0:
-    #     padding = N - remaining
-    #     spectrum = numpy.pad(spectrum, (0, padding), 'constant')
+    remaining = len(spectrum) % N
+    if remaining != 0:
+        print("Padding")
+        padding = N - remaining
+        spectrum = numpy.pad(spectrum, (0, padding), 'constant')
 
-    sub_band = numpy.split(spectrum, N)
+    sub_band = numpy.array_split(spectrum, N)
+
     sub_band_idx = numpy.arange(N)
     numpy.random.shuffle(sub_band_idx)
 
@@ -44,11 +47,12 @@ def encrypt(data, output_file):
         sub_band_shuffled[sub_band_idx[i]] = sub_band[i]
 
     spectrum_shuffled = numpy.concatenate(sub_band_shuffled)
-    encrypted_spectrum = scipy.fft.ifft(spectrum_shuffled)
+    # encrypted_spectrum = scipy.fft.ifft(spectrum_shuffled)
+    encrypted_spectrum = spectrum_shuffled
     enc_audio_data = numpy.real(encrypted_spectrum)
 
     # Remove padding
-    # enc_audio_data = enc_audio_data[:original_len]    
+    enc_audio_data = enc_audio_data[:original_len]    
 
     enc_audio_data = enc_audio_data.astype(numpy.int16)
 
@@ -60,29 +64,30 @@ def decrypt(input_file, output_file, key, original_len):
     # Get data
     sample_rate, audio_data = wavfile.read(input_file)
 
-    N = 100
+    N = 10000
 
-    spectrum = scipy.fft.fft(audio_data)
+    #spectrum = scipy.fft.fft(audio_data)
+    spectrum = audio_data
 
     # # Split spectrum into N sub-bands
-    # remaining = len(spectrum) % N
-    # if remaining != 0:
-    #     padding = N - remaining
-    #     spectrum = numpy.pad(spectrum, (0, padding), 'constant')
+    remaining = len(spectrum) % N
+    if remaining != 0:
+        padding = N - remaining
+        spectrum = numpy.pad(spectrum, (0, padding), 'constant')
 
-    sub_band = numpy.split(spectrum, N)
-    
-    
+    sub_band = numpy.array_split(spectrum, N)
+        
     arranged_sub_band = [0] * N
     for i in range(N):
         arranged_sub_band[i] = sub_band[key[i]]
 
     spectrum_shuffled = numpy.concatenate(arranged_sub_band)
-    encrypted_spectrum = scipy.fft.ifft(spectrum_shuffled)
+    #encrypted_spectrum = scipy.fft.ifft(spectrum_shuffled)
+    encrypted_spectrum = spectrum_shuffled
     enc_audio_data = numpy.real(encrypted_spectrum)
 
     # Remove padding
-    # enc_audio_data = enc_audio_data[:original_len]
+    enc_audio_data = enc_audio_data[:original_len]
 
     enc_audio_data = enc_audio_data.astype(numpy.int16)
 
