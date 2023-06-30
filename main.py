@@ -1,5 +1,5 @@
 import __diffuse_freq__
-
+import numpy
 
 def main():
 
@@ -8,9 +8,9 @@ def main():
 
     data = __diffuse_freq__.load_data(filename)
 
-    key = __diffuse_freq__.encrypt(data, output_file)
-
-    __diffuse_freq__.decrypt(output_file, "CantinaBand60_decrypted.wav", key)
+    key, original_len = __diffuse_freq__.encrypt(data, output_file)
+    
+    __diffuse_freq__.decrypt(output_file, "CantinaBand60_decrypted.wav", key, original_len)
 
 if __name__ == "__main__":
     main()
