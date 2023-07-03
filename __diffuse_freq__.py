@@ -1,8 +1,6 @@
 import numpy
-import scipy
 import scipy.fft
 import matplotlib.pyplot as plt
-import sympy
 from scipy.io import wavfile
 
 
@@ -93,20 +91,17 @@ def decrypt_shuffle(input_file, output_file, key_file):
 
     wavfile.write(output_file, sample_rate, dec_audio_data)
 
-def encrypt(data, output_file):
+def encrypt(input_file, output_file, key_file):
 
     # Get data
+    data = load_data(input_file)
     duration = data[0]
     sample_rate = data[1]
     audio_data = data[2]
-
     audio_data = audio_data.astype(numpy.float64)
 
     # Number of sub-bands
-    N = 10
-
-    # Plot audio data
-    plt.plot(audio_data)
+    N = 4
 
     spectrum = numpy.fft.fft(audio_data)
     
@@ -120,9 +115,6 @@ def encrypt(data, output_file):
 
     sub_band = numpy.array_split(spectrum, N)
 
-    for i in range(N):
-        sub_band[i] *= numpy.hanning(len(sub_band[i]))
-
     # Shuffle sub-bands
     sub_band_idx = numpy.arange(N)
     numpy.random.shuffle(sub_band_idx)
@@ -132,9 +124,7 @@ def encrypt(data, output_file):
         sub_band_shuffled[sub_band_idx[i]] = sub_band[i]
 
     spectrum_shuffled = numpy.concatenate(sub_band_shuffled)
-
     encrypted_spectrum = numpy.fft.ifft(spectrum_shuffled)
-
     enc_audio_data = numpy.real(encrypted_spectrum)
 
     # Remove padding
@@ -143,15 +133,30 @@ def encrypt(data, output_file):
     enc_audio_data = enc_audio_data.astype(numpy.int16)
 
     wavfile.write(output_file, sample_rate, enc_audio_data)
+
+    # Plot audio data
+    # plt.plot(audio_data)
+    # plt.plot(enc_audio_data)
+    # plt.show()
     
-    return sub_band_idx, original_len
+    # Write key file
+    key = sub_band_idx
+    key.tofile(key_file)
 
-def decrypt(input_file, output_file, key, original_len):
+
+def decrypt(input_file, output_file, key_file):
     # Get data
-    sample_rate, audio_data = wavfile.read(input_file)
-    N = 10
-
+    data = load_data(input_file)
+    duration = data[0]
+    sample_rate = data[1]
+    audio_data = data[2]
     audio_data = audio_data.astype(numpy.float64)
+
+    # Number of sub-bands
+    N = 4
+
+    # Load key
+    key = numpy.fromfile(key_file, dtype=int)
 
     spectrum = numpy.fft.fft(audio_data)
 
@@ -163,28 +168,23 @@ def decrypt(input_file, output_file, key, original_len):
         spectrum = spectrum[:-padding]
 
     sub_band = numpy.array_split(spectrum, N)
-
-    for i in range(N):
-        sub_band[i] *= numpy.hanning(len(sub_band[i]))
         
     arranged_sub_band = [0] * N
     for i in range(N):
         arranged_sub_band[i] = sub_band[key[i]]
-        #arranged_sub_band[key[i]] = sub_band[i]
 
     spectrum_arranged = numpy.concatenate(arranged_sub_band)
-
     decrypted_spectrum = numpy.fft.ifft(spectrum_arranged)
-
     dec_audio_data = numpy.real(decrypted_spectrum)
 
     # Remove padding
-    dec_audio_data = dec_audio_data[:original_len]
+    dec_audio_data = dec_audio_data[:len(audio_data)]
 
     dec_audio_data = dec_audio_data.astype(numpy.int16)
 
-    plt.plot(dec_audio_data)
-    plt.show()
+    # Plot audio data
+    # plt.plot(dec_audio_data)
+    # plt.show()
 
     wavfile.write(output_file, sample_rate, dec_audio_data)
 
